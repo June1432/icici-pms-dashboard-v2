@@ -195,4 +195,3 @@ elif role == \"Investor\":
         "Senior Manager": data['Senior Manager'],
         "Portfolio Allocation": data['Asset Allocation']
     })
-
