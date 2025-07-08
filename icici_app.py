@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import graphviz
 
 st.set_page_config(page_title="JANE PMS Dashboard", layout="wide")
 
@@ -84,7 +85,7 @@ if role == "Fund Manager":
     st.bar_chart(client_data['Strategy'].value_counts())
 
 elif role == "Relationship Manager":
-    st.title("RM Dashboard")
+    st.title("Relationship Manager Dashboard")
     st.subheader("Client Portfolio Overview")
     st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Risk Profile", "NAV", "TWR (%)", "MWR (%)"]])
 
@@ -98,22 +99,4 @@ elif role == "Distributor":
     st.subheader("Client Distribution Overview")
     st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Strategy", "Country"]])
 
-elif role == "Workflow":
-    st.title("JANE PMS Application Workflow")
-    st.markdown("""
-    ### Workflow Overview
-    - **Fund Manager (FM):** Sees strategy insights, analytics, and performance.
-    - **Relationship Manager (RM):** Oversees client portfolios, risk profile, and NAV.
-    - **Service Manager (SM):** Handles client servicing, bank, custodian, and compliance data.
-    - **Distributor:** Monitors client distribution, onboarding, and channel trends.
 
-    #### Key Backend Logic
-    - Financial ratios (Sharpe, Treynor, Jensen) calculated per client
-    - Benchmark logic in place for Nifty/Sensex comparison
-    - Assigned team mapping: FM, RM, SM per client
-    - Strategy classification: Value, Growth, Momentum
-
-    #### SEBI/RBI Compliance Coverage
-    - Includes data fields like PEP, PIS No, Custodian, Country of residence
-    - Validated client onboarding flows for non-resident clients
-    """)
