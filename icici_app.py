@@ -124,51 +124,29 @@ if role == "Relationship Manager":
     })
     st.plotly_chart(px.pie(lead_data, values='Count', names='Lead Status', title="Lead Conversion Ratio"), use_container_width=True)
 
-elif role == "Distributor":
-    st.title("Distributor Portal")
-    selected_dist = st.selectbox("Select Distributor:", distributors)
-    data = get_distributor_data(selected_dist)
-    st.subheader(f"Business Summary: {selected_dist}")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Allocation %", f"{data['Default Allocation (%)']}%")
-    col2.metric("Business Generated", f"₹ {data['Business Generated (₹ Cr)']} Cr")
-    col3.metric("Business Lost", f"₹ {data['Business Lost (₹ Cr)']} Cr")
-
-    st.subheader("Client AUM Breakdown")
-    st.dataframe(pd.DataFrame(data['Clients']))
-
-elif role == "Fund Manager":
-    st.title("Fund Manager Portal")
-    selected_fm = st.selectbox("Select Fund Manager:", fms)
-    data = get_fm_data(selected_fm)
-    st.subheader(f"AUM and Performance: {selected_fm}")
-
-    col1, col2 = st.columns(2)
-    col1.metric("Total Clients", data["Managed Clients"])
-    col2.metric("Total AUM", f"₹ {data['Total AUM (₹ Cr)']} Cr")
-
-    col3, col4 = st.columns(2)
-    col3.metric("YTD Return", f"{data['Year-to-Date Performance (%)']}%")
-    col4.metric("NAV", f"₹ {data['Net Asset Value (₹)']}")
-
-    st.subheader("Performance Metrics Reference")
-    st.table(ratio_guide)
-
-elif role == \"Investor\":
+elif role == "Investor":
     def calculate_financial_ratios(data, risk_free_rate=0.05, beta=1.0, market_return=0.12):
-        portfolio_return = data['Cumulative P&L (₹)'] / (data['Portfolio Value (₹ Lakhs)'] * 100000)
-        volatility = np.abs(data['Daily MTM (₹)']) / (data['Portfolio Value (₹ Lakhs)'] * 100000)
+        try:
+            portfolio_value = data['Portfolio Value (₹ Lakhs)'] * 100000
+            portfolio_return = data['Cumulative P&L (₹)'] / portfolio_value
+            volatility = abs(data['Daily MTM (₹)']) / portfolio_value
 
-        sharpe_ratio = (portfolio_return - risk_free_rate) / volatility if volatility else None
-        treynor_ratio = (portfolio_return - risk_free_rate) / beta if beta else None
-        jensen_alpha = portfolio_return - (risk_free_rate + beta * (market_return - risk_free_rate))
+            sharpe_ratio = (portfolio_return - risk_free_rate) / volatility if volatility else None
+            treynor_ratio = (portfolio_return - risk_free_rate) / beta if beta else None
+            jensen_alpha = portfolio_return - (risk_free_rate + beta * (market_return - risk_free_rate))
 
-        return {
-            "Sharpe Ratio": round(sharpe_ratio, 3) if sharpe_ratio else "N/A",
-            "Treynor Ratio": round(treynor_ratio, 3) if treynor_ratio else "N/A",
-            "Jensen Alpha": round(jensen_alpha, 3)
-        }
+            return {
+                "Sharpe Ratio": round(sharpe_ratio, 3) if sharpe_ratio else "N/A",
+                "Treynor Ratio": round(treynor_ratio, 3) if treynor_ratio else "N/A",
+                "Jensen Alpha": round(jensen_alpha, 3)
+            }
+        except ZeroDivisionError:
+            return {
+                "Sharpe Ratio": "N/A",
+                "Treynor Ratio": "N/A",
+                "Jensen Alpha": "N/A"
+            }
+
     st.title("Investor Portfolio")
     selected_inv = st.selectbox("Select Investor:", investors)
     data = get_investor_data(selected_inv)
@@ -181,7 +159,7 @@ elif role == \"Investor\":
 
     st.metric("Brokerage Paid", f"₹ {data['Total Brokerage (₹)']}")
 
-        st.subheader("Risk-Adjusted Performance Ratios")
+    st.subheader("Risk-Adjusted Performance Ratios")
     ratios = calculate_financial_ratios(data)
     colr1, colr2, colr3 = st.columns(3)
     colr1.metric("Sharpe Ratio", ratios['Sharpe Ratio'])
