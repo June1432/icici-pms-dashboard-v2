@@ -1,120 +1,102 @@
-# icici_app.py
+# alloy_pms_dashboard.py
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from datetime import datetime, timedelta
 import random
 
-st.set_page_config(page_title="ICICI PMS Dashboard", layout="wide")
+st.set_page_config(page_title="Alloy-Inspired PMS Dashboard", layout="wide")
 
-st.sidebar.markdown("👤 Logged in as **ICICI PMS** Portfolio Manager")
+# -------------------------------
+# Header and Role
+# -------------------------------
+st.title("📈 Portfolio Management Dashboard (Alloy Style)")
+role = st.sidebar.selectbox("Your Role", ["Relationship Manager (RM)", "Fund Manager (FM)", "Sales Manager (SM)"])
 
-st.title("📊 ICICI Portfolio Management Dashboard")
-st.markdown("Simulated PMS-like interface for Indian investors")
+st.sidebar.markdown(f"🧑 Logged in as **{role}**")
 
 client_name = st.text_input("Enter Client Name:")
-capital = st.number_input("Enter Investment Capital (₹):", min_value=100000, step=10000)
-risk_profile = st.selectbox("Select Risk Profile", ["Conservative", "Balanced", "Aggressive"])
+capital = st.number_input("Investment Capital (₹)", min_value=100000, step=50000)
+risk_profile = st.radio("Select Risk Profile", ["Conservative", "Balanced", "Aggressive"])
 
-def get_dummy_stocks(risk):
-    if risk == "Conservative":
-        return {
-            "HDFCBANK": 25,
-            "INFY": 25,
-            "ITC": 25,
-            "SBI": 25
-        }
-    elif risk == "Balanced":
-        return {
-            "ICICIBANK": 30,
-            "RELIANCE": 30,
-            "TCS": 20,
-            "MARUTI": 20
-        }
-    else:
-        return {
-            "ADANIENT": 40,
-            "ZOMATO": 20,
-            "IRCTC": 20,
-            "TATAMOTORS": 20
-        }
-
-stock_data = {
-    "HDFCBANK": {"price": 1600, "dividend": 15},
-    "INFY": {"price": 1500, "dividend": 10},
-    "ITC": {"price": 480, "dividend": 20},
-    "SBI": {"price": 720, "dividend": 12},
-    "ICICIBANK": {"price": 1150, "dividend": 10},
-    "RELIANCE": {"price": 2800, "dividend": 25},
-    "TCS": {"price": 3800, "dividend": 22},
-    "MARUTI": {"price": 10500, "dividend": 40},
-    "ADANIENT": {"price": 3100, "dividend": 0},
-    "ZOMATO": {"price": 195, "dividend": 0},
-    "IRCTC": {"price": 890, "dividend": 8},
-    "TATAMOTORS": {"price": 950, "dividend": 7}
+# -------------------------------
+# Dummy Indian stock universe
+# -------------------------------
+stock_pool = {
+    "Conservative": ["HDFCBANK", "INFY", "ITC", "SBI"],
+    "Balanced": ["ICICIBANK", "RELIANCE", "TCS", "MARUTI"],
+    "Aggressive": ["ADANIENT", "ZOMATO", "IRCTC", "TATAMOTORS"]
 }
 
-portfolio = get_dummy_stocks(risk_profile)
+stock_prices = {
+    "HDFCBANK": 1600, "INFY": 1500, "ITC": 480, "SBI": 720,
+    "ICICIBANK": 1150, "RELIANCE": 2800, "TCS": 3800, "MARUTI": 10500,
+    "ADANIENT": 3100, "ZOMATO": 195, "IRCTC": 890, "TATAMOTORS": 950
+}
 
-df = pd.DataFrame(portfolio.items(), columns=["Stock", "Allocation (%)"])
-df["Investment (₹)"] = df["Allocation (%)"] * capital / 100
-df["Stock Price (₹)"] = df["Stock"].map(lambda x: stock_data[x]["price"])
-df["Units"] = df["Investment (₹)"] / df["Stock Price (₹)"]
-df["Dividend/Unit (₹)"] = df["Stock"].map(lambda x: stock_data[x]["dividend"])
-df["Total Dividend"] = df["Units"] * df["Dividend/Unit (₹)"]
-df["TDS (10%)"] = df["Total Dividend"] * 0.10
+benchmark_price_today = 22000  # e.g., Nifty 50
+benchmark_price_30_days_ago = 21200
+benchmark_return = round(((benchmark_price_today - benchmark_price_30_days_ago) / benchmark_price_30_days_ago) * 100, 2)
 
-transactions = len(df)
-brokerage_fee = transactions * 10
+# -------------------------------
+# Portfolio Allocation
+# -------------------------------
+selected_stocks = stock_pool[risk_profile]
+allocations = [random.randint(20, 30) for _ in range(4)]
+allocations = [round(x * (100 / sum(allocations)), 2) for x in allocations]
 
-def simulate_returns():
-    daily = round(random.uniform(-0.5, 0.5), 2)
-    weekly = round(random.uniform(-1.5, 1.5), 2)
-    monthly = round(random.uniform(-4, 4), 2)
-    return daily, weekly, monthly
+data = {
+    "Stock": selected_stocks,
+    "Allocation (%)": allocations
+}
+df = pd.DataFrame(data)
+df["Investment (₹)"] = (df["Allocation (%)"] * capital) / 100
+df["Price (₹)"] = df["Stock"].map(stock_prices)
+df["Units"] = df["Investment (₹)"] / df["Price (₹)"]
 
-daily_ret, weekly_ret, monthly_ret = simulate_returns()
+# -------------------------------
+# Returns Simulation
+# -------------------------------
+df["Return (%)"] = [round(random.uniform(-5, 12), 2) for _ in range(4)]
+df["Current Value"] = df["Investment (₹)"] * (1 + df["Return (%)"] / 100)
 
-nav = capital + (monthly_ret / 100) * capital
-total_dividend = df["Total Dividend"].sum()
-total_tds = df["TDS (10%)"].sum()
+# -------------------------------
+# Metrics Calculation
+# -------------------------------
+portfolio_return = ((df["Current Value"].sum() - capital) / capital) * 100
+alpha = round(portfolio_return - benchmark_return, 2)
+beta = round(random.uniform(0.85, 1.2), 2)
+gamma = round(random.uniform(0.1, 0.9), 2)
 
-alpha = round(random.uniform(1, 5), 2)
-beta = round(random.uniform(0.7, 1.3), 2)
-gamma = round(random.uniform(0.1, 1.0), 2)
+# -------------------------------
+# Display Section
+# -------------------------------
+st.subheader(f"📊 Portfolio Overview for {client_name if client_name else 'Investor'}")
+st.dataframe(df.style.format({
+    "Allocation (%)": "{:.2f}%",
+    "Investment (₹)": "₹{:.2f}",
+    "Price (₹)": "₹{:.2f}",
+    "Units": "{:.2f}",
+    "Return (%)": "{:.2f}%",
+    "Current Value": "₹{:.2f}"
+}))
 
-st.subheader("📈 Portfolio Overview")
-st.dataframe(df.style.format({"Investment (₹)": "₹{:.2f}", "Stock Price (₹)": "₹{:.2f}", 
-                              "Units": "{:.2f}", "Total Dividend": "₹{:.2f}", "TDS (10%)": "₹{:.2f}"}))
-
+# -------------------------------
+# Key Metrics
+# -------------------------------
 col1, col2, col3 = st.columns(3)
-col1.metric("💹 NAV", f"₹{nav:,.2f}")
-col2.metric("🎁 Dividends", f"₹{total_dividend:,.2f}")
-col3.metric("🧾 TDS", f"₹{total_tds:,.2f}")
+col1.metric("📈 Portfolio Return", f"{portfolio_return:.2f}%", delta=f"{portfolio_return - benchmark_return:.2f}% vs Benchmark")
+col2.metric("📊 Alpha", f"{alpha}%")
+col3.metric("📉 Benchmark Return", f"{benchmark_return}%")
 
 col4, col5, col6 = st.columns(3)
-col4.metric("📆 Daily Return (%)", f"{daily_ret}%")
-col5.metric("🗓️ Weekly Return (%)", f"{weekly_ret}%")
-col6.metric("📅 Monthly Return (%)", f"{monthly_ret}%")
+col4.metric("📐 Beta", f"{beta}")
+col5.metric("📶 Gamma", f"{gamma}")
+col6.metric("🧾 Total Value", f"₹{df['Current Value'].sum():,.2f}")
 
-col7, col8, col9 = st.columns(3)
-col7.metric("📊 Alpha", f"{alpha}")
-col8.metric("📊 Beta", f"{beta}")
-col9.metric("📊 Gamma", f"{gamma}")
+# -------------------------------
+# Billing Info
+# -------------------------------
+next_billing_date = datetime.today() + timedelta(days=30)
+st.info(f"📅 Next Billing Date: **{next_billing_date.strftime('%d %B %Y')}**")
 
-st.write(f"💸 Total Brokerage Charged: ₹{brokerage_fee}")
-billing_date = datetime.today() + timedelta(days=30)
-st.write(f"🧾 Next Billing Date: {billing_date.strftime('%d %B %Y')}")
-
-st.subheader("🏢 Other PMS Providers in India")
-pms_list = [
-    "Motilal Oswal PMS",
-    "Marcellus Investment Managers",
-    "ASK Investment Managers",
-    "SBI PMS",
-    "White Oak Capital",
-    "Aditya Birla PMS"
-]
-for pms in pms_list:
-    st.markdown(f"- {pms}")
