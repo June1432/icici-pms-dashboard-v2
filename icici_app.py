@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import graphviz
 
 st.set_page_config(page_title="JANE PMS Dashboard", layout="wide")
 
@@ -28,13 +27,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-roles = ["Relationship Manager", "Fund Manager", "Service Manager", "Distributor", "Workflow"]
+roles = ["Relationship Manager", "Fund Manager", "Service Manager", "Distributor"]
 role = st.sidebar.selectbox("Select User Role:", roles)
 
 # Sidebar filters
-if role != "Workflow":
-    st.sidebar.text_input("Search Client (Name / PAN / City):")
-    st.sidebar.selectbox("Filter by Risk Profile:", ["All", "Low", "Medium", "High"])
+st.sidebar.text_input("Search Client (Name / PAN / City):")
+st.sidebar.selectbox("Filter by Risk Profile:", ["All", "Low", "Medium", "High"])
 
 # Dummy user pools
 rms = ["Ravi Mehta", "Neha Sharma", "Arjun Iyer", "Divya Rao", "Kunal Singh"]
@@ -98,5 +96,3 @@ elif role == "Distributor":
     st.title("Distributor Dashboard")
     st.subheader("Client Distribution Overview")
     st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Strategy", "Country"]])
-
-
