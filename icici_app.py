@@ -1,80 +1,96 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
-import random
+import numpy as np
 
-st.set_page_config(page_title="JANE | Fund Management", layout="wide")
+# Set page config
+st.set_page_config(page_title="JANE PMS Dashboard", layout="wide")
 
-# Minimal black-and-white styling
-st.markdown("""
-<style>
-body, .main { background-color: #fff; color: #000; }
-div.stButton button { background-color: #000; color: #fff; }
-.stTextInput, .stNumberInput, .stSelectbox { background-color: #f2f2f2; color: #000; }
-</style>
-""", unsafe_allow_html=True)
+# Define roles
+roles = ["Relationship Manager", "Fund Manager", "Distributor", "Investor"]
 
-# Header
-st.title("JANE Fund Management Dashboard")
-st.markdown("• SEBI/RBI Compliant • Clean, modern design")
+# Sidebar for role selection
+st.sidebar.title("User Role")
+role = st.sidebar.selectbox("Select your role:", roles)
 
-# Sidebar roles & client inputs
-role = st.sidebar.radio("Select Role", ["Relationship Manager", "Fund Manager", "Sales Manager"])
-st.sidebar.markdown(f"**Logged in as:** {role}")
+# Dummy data
+clients_df = pd.DataFrame({
+    "Name": ["Alice", "Bob", "Charlie", "Diana"],
+    "Category": ["HNI", "Retail", "UHNI", "Retail"],
+    "City": ["Mumbai", "Delhi", "Bangalore", "Hyderabad"],
+    "AUM (Cr)": [3.5, 0.6, 12.0, 0.9],
+    "Risk": ["High", "Low", "Medium", "Low"],
+})
 
-client = st.sidebar.text_input("Client Name")
-capital = st.sidebar.number_input("Investment Capital (₹)", min_value=100000, step=50000)
-risk = st.sidebar.selectbox("Risk Profile", ["Conservative", "Balanced", "Aggressive"])
+# RM View
+if role == "Relationship Manager":
+    st.title("👤 Relationship Manager Dashboard")
+    st.subheader("Client Overview")
+    
+    total_clients = len(clients_df)
+    total_aum = clients_df["AUM (Cr)"].sum()
+    category_counts = clients_df["Category"].value_counts()
 
-# Stock universe and prices
-stock_pool = {
-    "Conservative": ["HDFCBANK", "INFY", "ITC", "SBI"],
-    "Balanced": ["ICICIBANK", "RELIANCE", "TCS", "MARUTI"],
-    "Aggressive": ["ADANIENT", "ZOMATO", "IRCTC", "TATAMOTORS"]
-}
-prices = {"HDFCBANK":1600, "INFY":1500, "ITC":480, "SBI":720, "ICICIBANK":1150,
-          "RELIANCE":2800, "TCS":3800, "MARUTI":10500, "ADANIENT":3100,
-          "ZOMATO":195, "IRCTC":890, "TATAMOTORS":950}
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Clients", total_clients)
+    col2.metric("Total AUM (Cr)", f"₹ {total_aum:.2f}")
+    col3.metric("Retail Clients", category_counts.get("Retail", 0))
 
-# Allocate dynamically
-sel = stock_pool[risk]
-alloc = random.choices(range(20,31), k=4)
-alloc = [round(a*100/sum(alloc),2) for a in alloc]
+    st.subheader("Client Breakdown")
+    st.dataframe(clients_df)
 
-df = pd.DataFrame({"Stock": sel, "Alloc (%)": alloc})
-df["Invest (₹)"] = df["Alloc (%)"] * capital / 100
-df["Price (₹)"] = df["Stock"].map(prices)
-df["Units"] = df["Invest (₹)"]/df["Price (₹)"]
-df["Return (%)"] = [round(random.uniform(-5,10),2) for _ in df.index]
-df["Value (₹)"] = df["Invest (₹)"] * (1 + df["Return (%)"]/100)
+    st.subheader("Demographics")
+    st.bar_chart(clients_df["City"].value_counts())
 
-# Benchmark & metrics
-benchmark = 6.5
-port_ret = round((df["Value (₹)"].sum()-capital)/capital*100,2)
-alpha = round(port_ret - benchmark,2)
-beta = round(random.uniform(0.9,1.2),2)
-gamma = round(random.uniform(0.1,0.9),2)
+# FM View
+elif role == "Fund Manager":
+    st.title("📈 Fund Manager Dashboard")
+    st.subheader("Portfolio Allocation Overview")
 
-# Display layout
-st.subheader(f"Client Portfolio: {client or '—'}")
-st.dataframe(df.style.format({"Alloc (%)":"{:.2f}%", "Invest (₹)":"₹{:.2f}",
-                              "Price (₹)":"₹{:.2f}", "Units":"{:.2f}",
-                              "Return (%)":"{:.2f}%", "Value (₹)":"₹{:.2f}"}))
+    portfolio_data = pd.DataFrame({
+        "Asset Class": ["Equity", "Debt", "Gold", "Cash"],
+        "Allocation (%)": [50, 30, 10, 10]
+    })
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Portfolio Return", f"{port_ret}%", delta=f"{port_ret-benchmark}% vs Benchmark")
-c2.metric("Alpha", f"{alpha}%")
-c3.metric("Benchmark", f"{benchmark}%")
+    st.dataframe(portfolio_data)
+    st.subheader("Performance vs Benchmark")
+    performance = pd.DataFrame({
+        "Month": pd.date_range("2024-01-01", periods=6, freq='M'),
+        "Fund Return (%)": [2.1, 1.8, 3.0, -0.5, 2.4, 1.1],
+        "Benchmark Return (%)": [1.9, 2.0, 2.5, -0.2, 1.8, 1.3]
+    })
+    st.line_chart(performance.set_index("Month"))
 
-c4, c5, c6 = st.columns(3)
-c4.metric("Beta", f"{beta}")
-c5.metric("Gamma", f"{gamma}")
-c6.metric("Total Value", f"₹{df['Value (₹)'].sum():,.2f}")
+# Distributor View
+elif role == "Distributor":
+    st.title("🔗 Distributor Dashboard")
+    st.subheader("Sales Overview")
 
-# Billing
-next_bill = datetime.today() + timedelta(days=30)
-st.markdown(f"**Next Billing Date:** {next_bill.strftime('%d %b %Y')}")
+    st.metric("Total Clients Referred", 18)
+    st.metric("Total AUM Raised", "₹ 22 Cr")
 
-# Compliance note
-st.markdown("---")
-st.markdown("Compliant with **SEBI (Portfolio Managers) Regulations, 2020** and **RBI oversight**.")
+    st.subheader("Top Performing RMs")
+    st.table(pd.DataFrame({
+        "RM Name": ["Ravi", "Neha", "Arjun"],
+        "Clients Added": [5, 4, 3],
+        "AUM Raised (Cr)": [5.5, 4.2, 3.8]
+    }))
+
+# Investor View
+elif role == "Investor":
+    st.title("💼 Investor Dashboard")
+    st.subheader("My Portfolio")
+
+    my_portfolio = pd.DataFrame({
+        "Asset": ["Equity", "Debt", "Cash"],
+        "Value (₹ Lakhs)": [7.5, 3.0, 1.0]
+    })
+
+    st.dataframe(my_portfolio)
+    st.subheader("Performance")
+    st.line_chart(pd.DataFrame({
+        "Month": pd.date_range("2024-01-01", periods=6, freq='M'),
+        "Portfolio Value": [10, 10.5, 11.2, 11.0, 11.8, 12.3]
+    }).set_index("Month"))
+
+    st.subheader("My Advisor")
+    st.info("Your RM: Neha Sharma (📧 neha@jane-pms.in)")
