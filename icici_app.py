@@ -155,7 +155,20 @@ elif role == "Fund Manager":
     st.subheader("Performance Metrics Reference")
     st.table(ratio_guide)
 
-elif role == "Investor":
+elif role == \"Investor\":
+    def calculate_financial_ratios(data, risk_free_rate=0.05, beta=1.0, market_return=0.12):
+        portfolio_return = data['Cumulative P&L (₹)'] / (data['Portfolio Value (₹ Lakhs)'] * 100000)
+        volatility = np.abs(data['Daily MTM (₹)']) / (data['Portfolio Value (₹ Lakhs)'] * 100000)
+
+        sharpe_ratio = (portfolio_return - risk_free_rate) / volatility if volatility else None
+        treynor_ratio = (portfolio_return - risk_free_rate) / beta if beta else None
+        jensen_alpha = portfolio_return - (risk_free_rate + beta * (market_return - risk_free_rate))
+
+        return {
+            "Sharpe Ratio": round(sharpe_ratio, 3) if sharpe_ratio else "N/A",
+            "Treynor Ratio": round(treynor_ratio, 3) if treynor_ratio else "N/A",
+            "Jensen Alpha": round(jensen_alpha, 3)
+        }
     st.title("Investor Portfolio")
     selected_inv = st.selectbox("Select Investor:", investors)
     data = get_investor_data(selected_inv)
@@ -168,6 +181,13 @@ elif role == "Investor":
 
     st.metric("Brokerage Paid", f"₹ {data['Total Brokerage (₹)']}")
 
+        st.subheader("Risk-Adjusted Performance Ratios")
+    ratios = calculate_financial_ratios(data)
+    colr1, colr2, colr3 = st.columns(3)
+    colr1.metric("Sharpe Ratio", ratios['Sharpe Ratio'])
+    colr2.metric("Treynor Ratio", ratios['Treynor Ratio'])
+    colr3.metric("Jensen Alpha", ratios['Jensen Alpha'])
+
     st.subheader("Assigned Team & Strategy")
     st.write({
         "Relationship Manager": data['Assigned RM'],
@@ -175,3 +195,4 @@ elif role == "Investor":
         "Senior Manager": data['Senior Manager'],
         "Portfolio Allocation": data['Asset Allocation']
     })
+
