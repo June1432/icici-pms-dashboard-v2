@@ -1,98 +1,59 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+import graphviz
 
-st.set_page_config(page_title="JANE PMS Dashboard", layout="wide")
+st.set_page_config(page_title="AMC Workflow | JANE", layout="wide")
+st.title("JANE | AMC Client Lifecycle Workflow")
+st.markdown("Designed for internal operations teams and onboarding staff")
 
-# Black & White enterprise theme
-st.markdown("""
-    <style>
-    body, .stApp {
-        background-color: #ffffff;
-        color: #000000;
-        font-family: 'Segoe UI', sans-serif;
-    }
-    .block-container {
-        padding: 2rem;
-    }
-    .stMetric, .stText, .stHeader {
-        color: #000000;
-    }
-    .css-1d391kg, .css-1v3fvcr {
-        background-color: #f4f4f4 !important;
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow: none;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.subheader("🔄 Full Client Journey from Prospect to Exit")
 
-roles = ["Relationship Manager", "Fund Manager", "Service Manager", "Distributor"]
-role = st.sidebar.selectbox("Select User Role:", roles)
+# Graphviz Diagram
+workflow = graphviz.Digraph()
 
-# Sidebar filters
-st.sidebar.text_input("Search Client (Name / PAN / City):")
-st.sidebar.selectbox("Filter by Risk Profile:", ["All", "Low", "Medium", "High"])
+# Stage 1: Lead
+workflow.node("Prospect", "Prospect (HNI / Institution)", shape="box")
+workflow.node("Sales", "Sales / RM / Distributor", shape="box")
+workflow.edge("Prospect", "Sales", label="Lead generation")
+workflow.edge("Sales", "Compliance", label="KYC / Due Diligence")
 
-# Dummy user pools
-rms = ["Ravi Mehta", "Neha Sharma", "Arjun Iyer", "Divya Rao", "Kunal Singh"]
-fms = ["Rahul Khanna", "Sneha Desai", "Amit Verma", "Priya Das", "Vinay Joshi"]
-distributors = ["Motilal", "NJ Wealth", "ICICI Direct", "Axis Capital", "Groww"]
-clients = [f"Client {i}" for i in range(1, 6)]
+# Stage 2: Onboarding
+workflow.node("Compliance", "Compliance & Legal", shape="box")
+workflow.node("Operations", "Operations Team", shape="box")
+workflow.edge("Compliance", "Operations", label="Verified client data")
+workflow.edge("Operations", "ClientLogin", label="Create login & dashboard")
+workflow.node("ClientLogin", "Client Login Created", shape="box")
 
-# Simulation functions
-def get_client_data():
-    return pd.DataFrame({
-        "Client ID": [f"CID{i}" for i in range(1, 6)],
-        "Name": clients,
-        "Capital (₹ Lakhs)": np.random.randint(10, 100, size=5),
-        "Risk Profile": np.random.choice(["Low", "Medium", "High"], size=5),
-        "Strategy": np.random.choice(["Value", "Growth", "Momentum"], size=5),
-        "NAV": np.round(np.random.uniform(90, 150, 5), 2),
-        "TWR (%)": np.round(np.random.uniform(-2, 15, 5), 2),
-        "MWR (%)": np.round(np.random.uniform(-2, 18, 5), 2),
-        "Custodian": np.random.choice(["HDFC Bank", "ICICI Bank"], size=5),
-        "Bank Account": [f"XXXX{i}1234" for i in range(5)],
-        "PEP": np.random.choice(["Yes", "No"], size=5),
-        "PIS No": [f"PIS00{i}" for i in range(5)],
-        "Country": np.random.choice(["India", "UAE", "Singapore", "UK"], size=5),
-        "FM": np.random.choice(fms, size=5),
-        "RM": np.random.choice(rms, size=5),
-        "SM": np.random.choice(["Rohit Sinha", "Kiran Shetty"], size=5)
-    })
+# Stage 3: Portfolio Setup
+workflow.node("FundManager", "Fund Manager (FM)", shape="box")
+workflow.node("TradeDesk", "Trade Desk", shape="box")
+workflow.edge("ClientLogin", "FundManager", label="Capital & risk profile")
+workflow.edge("FundManager", "TradeDesk", label="Strategy → Execution")
+workflow.edge("TradeDesk", "Operations", label="Units allocated")
 
-def calculate_ratios(row, rf=0.05, beta=1.0, mr=0.12):
-    try:
-        returns = row['TWR (%)'] / 100
-        volatility = 0.12
-        sharpe = (returns - rf) / volatility
-        treynor = (returns - rf) / beta
-        jensen = returns - (rf + beta * (mr - rf))
-        return pd.Series([sharpe, treynor, jensen])
-    except:
-        return pd.Series([None, None, None])
+# Stage 4: Monitoring
+workflow.node("Monitoring", "Monitoring & Reporting", shape="box")
+workflow.node("Client", "Client", shape="box")
+workflow.edge("Operations", "Monitoring", label="NAV / TWR updates")
+workflow.edge("Monitoring", "Client", label="Statements / Commentary")
 
-client_data = get_client_data()
-client_data[['Sharpe', 'Treynor', 'Jensen']] = client_data.apply(calculate_ratios, axis=1)
+# Stage 5: Modifications
+workflow.node("RMUpdate", "Client RM / Servicing", shape="box")
+workflow.edge("Client", "RMUpdate", label="Top-up / Exit / Strategy change")
+workflow.edge("RMUpdate", "FundManager", label="Rebalance required")
+workflow.edge("FundManager", "TradeDesk")
+workflow.edge("TradeDesk", "Operations")
+workflow.edge("Operations", "Monitoring")
 
-if role == "Fund Manager":
-    st.title("Fund Manager Dashboard")
-    st.subheader("Managed Clients Overview")
-    st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Strategy", "NAV", "TWR (%)", "MWR (%)"]])
-    st.subheader("Strategy Insights")
-    st.bar_chart(client_data['Strategy'].value_counts())
+# Stage 6: Exit
+workflow.node("Finance", "Finance Team", shape="box")
+workflow.node("Exit", "Exit & Closure", shape="box")
+workflow.edge("Client", "Exit", label="Full withdrawal")
+workflow.edge("Exit", "Operations", label="Liquidation")
+workflow.edge("Operations", "Finance", label="Payout")
+workflow.edge("Finance", "Client", label="Bank Transfer + Final Report")
 
-elif role == "Relationship Manager":
-    st.title("Relationship Manager Dashboard")
-    st.subheader("Client Portfolio Overview")
-    st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Risk Profile", "NAV", "TWR (%)", "MWR (%)"]])
+# Display
+st.graphviz_chart(workflow)
 
-elif role == "Service Manager":
-    st.title("Service Manager View")
-    st.subheader("Client Assignment")
-    st.dataframe(client_data[["Client ID", "Name", "RM", "FM", "SM", "Custodian", "Bank Account", "PEP", "Country", "PIS No"]])
-
-elif role == "Distributor":
-    st.title("Distributor Dashboard")
-    st.subheader("Client Distribution Overview")
-    st.dataframe(client_data[["Client ID", "Name", "Capital (₹ Lakhs)", "Strategy", "Country"]])
+st.markdown("---")
+st.markdown("**All processes comply with SEBI PMS Regulations, RBI KYC norms, and internal audit controls.")
