@@ -57,6 +57,10 @@ st.markdown("---")
 st.sidebar.title("Select Role View")
 role = st.sidebar.selectbox("User Role:", ["Fund Manager", "Relationship Manager", "Service Manager", "Distributor"])
 
+st.sidebar.markdown("### Filter by Date Range")
+start_filter = st.sidebar.date_input("Start Date", value=datetime.date(2023, 1, 1))
+end_filter = st.sidebar.date_input("End Date", value=datetime.date(2025, 12, 31))
+
 rms = ["Ravi Mehta", "Neha Sharma", "Arjun Iyer", "Divya Rao", "Kunal Singh"]
 fms = ["Rahul Khanna", "Sneha Desai", "Amit Verma", "Priya Das", "Vinay Joshi"]
 distributors = ["Motilal", "NJ Wealth", "ICICI Direct", "Axis Capital", "Groww"]
@@ -107,6 +111,8 @@ client_data = get_client_data()
 client_data[['Sharpe', 'Treynor', 'Jensen']] = client_data.apply(calculate_ratios, axis=1)
 client_data['IRR'] = client_data.apply(calculate_irr, axis=1)
 
+filtered_data = client_data[(client_data['Start Date'] >= start_filter) & (client_data['End Date'] <= end_filter)]
+
 def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -116,7 +122,7 @@ def to_excel(df):
 
 if role == "Fund Manager":
     selected_fm = st.selectbox("Select Fund Manager:", fms)
-    fm_clients = client_data[client_data['FM'] == selected_fm]
+    fm_clients = filtered_data[filtered_data['FM'] == selected_fm]
     st.title(f"Fund Manager View - {selected_fm}")
     st.metric("Total AUM (₹ Cr)", f"{fm_clients['Capital (₹ Lakhs)'].sum() / 100:.2f}")
     st.bar_chart(fm_clients.set_index("Name")["Capital (₹ Lakhs)"])
@@ -129,11 +135,33 @@ if role == "Fund Manager":
 
 elif role == "Relationship Manager":
     selected_rm = st.selectbox("Select RM:", rms)
-    rm_clients = client_data[client_data['RM'] == selected_rm]
+    rm_clients = filtered_data[filtered_data['RM'] == selected_rm]
     st.title(f"Relationship Manager View - {selected_rm}")
     st.bar_chart(rm_clients['Risk Profile'].value_counts())
     st.subheader("Capital by Client")
     st.bar_chart(rm_clients.set_index("Name")["Capital (₹ Lakhs)"])
     st.subheader("Assigned Clients")
     st.dataframe(rm_clients[["Client ID", "Name", "Strategy", "Risk Profile", "TWR (%)", "NAV", "IRR"]])
-    st.download_button("Download RM Dat
+    st.download_button("Download RM Data (Excel)", data=to_excel(rm_clients), file_name="RM_Report.xlsx")
+
+elif role == "Service Manager":
+    selected_sm = st.selectbox("Select SM:", ["Rohit Sinha", "Kiran Shetty"])
+    sm_clients = filtered_data[filtered_data['SM'] == selected_sm]
+    st.title(f"Service Manager View - {selected_sm}")
+    st.dataframe(sm_clients[["Client ID", "Name", "Custodian", "Bank Account", "PEP", "PIS No", "Country"]])
+    st.subheader("Client Country Breakdown")
+    st.bar_chart(sm_clients['Country'].value_counts())
+    st.download_button("Download SM Data (Excel)", data=to_excel(sm_clients), file_name="SM_Report.xlsx")
+
+elif role == "Distributor":
+    selected_dist = st.selectbox("Select Distributor:", distributors)
+    dist_clients = filtered_data[filtered_data['Distributor'] == selected_dist]
+    st.title(f"Distributor View - {selected_dist}")
+    st.metric("Total AUM (₹ Cr)", f"{dist_clients['Capital (₹ Lakhs)'].sum() / 100:.2f}")
+    st.bar_chart(dist_clients['Strategy'].value_counts())
+    st.subheader("Client List")
+    st.dataframe(dist_clients[["Client ID", "Name", "Capital (₹ Lakhs)", "Country"]])
+    st.download_button("Download Distributor Data (Excel)", data=to_excel(dist_clients), file_name="Distributor_Report.xlsx")
+
+st.markdown("---")
+st.markdown("This dashboard is a simulated proof of concept. Data aligns with SEBI PMS 2020 regulations and internal audit principles.")
