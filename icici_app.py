@@ -1,17 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 
 st.set_page_config(page_title="JANE PMS Dashboard", layout="wide")
 
-# Custom CSS for Alloy-style theme
+# Custom CSS for Alloy-style professional theme (no emojis, clean layout)
 st.markdown("""
     <style>
-    body {
-        background-color: #000000;
-        color: #ffffff;
-    }
-    .stApp {
+    body, .stApp {
         background-color: #000000;
         color: #ffffff;
     }
@@ -48,8 +45,12 @@ def get_rm_data(name):
     return {
         "Total Clients": np.random.randint(10, 50),
         "AUM (Cr)": round(np.random.uniform(5, 50), 2),
-        "Accounts Opened Q1": np.random.randint(1, 10),
-        "Accounts Opened Q2": np.random.randint(1, 10),
+        "Accounts": {
+            "Q1": np.random.randint(1, 10),
+            "Q2": np.random.randint(1, 10),
+            "Q3": np.random.randint(1, 10),
+            "Q4": np.random.randint(1, 10),
+        },
         "Incentive Earned (₹ Lakhs)": round(np.random.uniform(1, 10), 2),
         "Successful Leads": np.random.randint(5, 20),
         "Unsuccessful Leads": np.random.randint(1, 10)
@@ -90,50 +91,67 @@ def get_investor_data(name):
     }
 
 if role == "Relationship Manager":
-    st.title("👤 Relationship Manager Dashboard")
+    st.title("Relationship Manager Dashboard")
     selected_rm = st.selectbox("Select RM:", rms)
     data = get_rm_data(selected_rm)
     st.subheader(f"Summary for {selected_rm}")
-    st.metric("Total Clients", data["Total Clients"])
-    st.metric("AUM (Cr)", f"₹ {data['AUM (Cr)']}")
-    st.metric("Incentive Earned", f"₹ {data['Incentive Earned (₹ Lakhs)']} Lakhs")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Clients", data["Total Clients"])
+    col2.metric("AUM (Cr)", f"₹ {data['AUM (Cr)']}")
+    col3.metric("Incentive Earned", f"₹ {data['Incentive Earned (₹ Lakhs)']} Lakhs")
 
     st.subheader("Quarter-wise Accounts Opened")
-    st.write({"Q1": data['Accounts Opened Q1'], "Q2": data['Accounts Opened Q2']})
+    account_df = pd.DataFrame.from_dict(data['Accounts'], orient='index', columns=["Accounts"])
+    st.bar_chart(account_df)
 
     st.subheader("Lead Performance")
-    st.write({"Successful Leads": data['Successful Leads'], "Unsuccessful Leads": data['Unsuccessful Leads']})
+    lead_df = pd.DataFrame({
+        "Lead Status": ["Successful", "Unsuccessful"],
+        "Count": [data['Successful Leads'], data['Unsuccessful Leads']]
+    })
+    fig = px.pie(lead_df, values='Count', names='Lead Status', title="Lead Success Ratio")
+    st.plotly_chart(fig, use_container_width=True)
 
 elif role == "Distributor":
-    st.title("🔗 Distributor Dashboard")
+    st.title("Distributor Dashboard")
     selected_dist = st.selectbox("Select Distributor:", distributors)
     data = get_distributor_data(selected_dist)
     st.subheader(f"Summary for {selected_dist}")
-    st.metric("Default Share Allocated", f"{data['Default Share Allocated (%)']}%")
-    st.metric("Business Brought", f"₹ {data['Business Brought (Cr)']} Cr")
-    st.metric("Business Lost", f"₹ {data['Business Lost (Cr)']} Cr")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Default Share Allocated", f"{data['Default Share Allocated (%)']}%")
+    col2.metric("Business Brought", f"₹ {data['Business Brought (Cr)']} Cr")
+    col3.metric("Business Lost", f"₹ {data['Business Lost (Cr)']} Cr")
 
     st.subheader("Client Details")
     st.table(pd.DataFrame(data['Clients']))
 
 elif role == "Fund Manager":
-    st.title("📈 Fund Manager Dashboard")
+    st.title("Fund Manager Dashboard")
     selected_fm = st.selectbox("Select Fund Manager:", fms)
     data = get_fm_data(selected_fm)
     st.subheader(f"Summary for {selected_fm}")
-    st.metric("Total Clients", data["Total Clients"])
-    st.metric("Total AUM (Cr)", f"₹ {data['Total AUM (Cr)']}")
-    st.metric("YTD P&L (%)", f"{data['YTD P&L (%)']}%")
-    st.metric("NAV", f"₹ {data['NAV (₹)']}")
+
+    col1, col2 = st.columns(2)
+    col1.metric("Total Clients", data["Total Clients"])
+    col2.metric("Total AUM (Cr)", f"₹ {data['Total AUM (Cr)']}")
+
+    col3, col4 = st.columns(2)
+    col3.metric("YTD P&L (%)", f"{data['YTD P&L (%)']}%")
+    col4.metric("NAV", f"₹ {data['NAV (₹)']}")
 
 elif role == "Investor":
-    st.title("💼 Investor Dashboard")
+    st.title("Investor Dashboard")
     selected_inv = st.selectbox("Select Investor:", investors)
     data = get_investor_data(selected_inv)
     st.subheader(f"Summary for {selected_inv}")
-    st.metric("Total Value", f"₹ {data['Total Value (₹ Lakhs)']} Lakhs")
-    st.metric("Daily P&L", f"₹ {data['Daily P&L (₹)']}")
-    st.metric("Total P&L", f"₹ {data['Total P&L (₹)']}")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Value", f"₹ {data['Total Value (₹ Lakhs)']} Lakhs")
+    col2.metric("Daily P&L", f"₹ {data['Daily P&L (₹)']}")
+    col3.metric("Total P&L", f"₹ {data['Total P&L (₹)']}")
+
     st.metric("Brokerage Paid", f"₹ {data['Brokerage (₹)']}")
 
     st.subheader("Relationship Mapping")
